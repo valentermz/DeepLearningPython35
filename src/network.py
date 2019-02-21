@@ -93,10 +93,10 @@ class Network:
 
         self.weights = [w - (eta / len(mini_batch)) * nw
                         for w, nw in zip(self.weights, nabla_w)]
-        print('debug line 96:', self.biases[0].shape)
+        # print('debug line 96:', self.biases[0].shape)
         self.biases = [b - (eta / len(mini_batch)) * nb
                        for b, nb in zip(self.biases, nabla_b)]
-        print('debug line 99:', self.biases[0].shape)
+        # print('debug line 99:', self.biases[0].shape)
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
@@ -118,7 +118,7 @@ class Network:
         # backward pass
         delta = self.cost_derivative(activations[-1], y) * \
             sigmoid_prime(zs[-1])
-        nabla_b[-1] = delta  # debug: sum of columns?
+        nabla_b[-1] = delta.sum(axis=1).reshape(self.biases[-1].shape)  # debug: sum of columns?
         nabla_w[-1] = np.matmul(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
         # differently to the notation in Chapter 2 of the book.  Here,
@@ -131,9 +131,9 @@ class Network:
             sp = sigmoid_prime(z)
             delta = np.multiply(
                 np.matmul(self.weights[-l + 1].transpose(), delta), sp)
-            # print('debug line 131:', delta.shape)  # for debugging
-            nabla_b[-l] = delta
+            nabla_b[-l] = delta.sum(axis=1).reshape(self.biases[-l].shape)  # debug: sum of columns?
             nabla_w[-l] = np.matmul(delta, activations[-l - 1].transpose())
+            # print('debug line 136:', nabla_b[0].shape, nabla_w[0].shape)  # for debugging
         return (nabla_b, nabla_w)
 
     def evaluate(self, test_data):
@@ -165,11 +165,11 @@ def sigmoid_prime(z):
 
 
 
-import mnist_loader
-training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
-training_data = list(training_data)
-training_data = training_data[1234:1244] + training_data[9876:9886]  # work with small sample only
-net = Network([784, 30, 10])
-# x, y = net.update_mini_batch(training_data, eta=3)
+# import mnist_loader
+# training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
+# training_data = list(training_data)
+# training_data = training_data[1234:1244] + training_data[9876:9886]  # work with small sample only
+# net = Network([784, 30, 10])
+# # x, y = net.update_mini_batch(training_data, eta=3)
 
-net.SGD(training_data, 3, 10, 1.0, test_data=test_data)
+# net.SGD(training_data, 3, 10, 1.0, test_data=test_data)
