@@ -58,7 +58,7 @@ class Network:
             test_data = list(test_data)
             n_test = len(test_data)
 
-        for j in range(epochs):
+        for j in range(epochs):                     # What happens if epochs doesn't divide n_test??
             random.shuffle(training_data)
             mini_batches = [
                 training_data[k:k + mini_batch_size]
@@ -68,6 +68,7 @@ class Network:
             if test_data:
                 print("Epoch {} : {} / {}".format(
                     j, self.evaluate(test_data), n_test))
+                # print('debug line 71', self.biases[0].shape, self.weights[0].shape)  # This returns (30, 10) for biases but it should always stay (30, 1)
             else:
                 print("Epoch {} complete".format(j))
 
@@ -78,14 +79,24 @@ class Network:
         is the learning rate."""
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
-        for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        x = np.column_stack([data_point[0] for data_point in mini_batch])
+        y = np.column_stack([data_point[1] for data_point in mini_batch])
+        # print('debug line 84:', x.shape, y.shape)
+        delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+        nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+        nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+
+        # for x, y in mini_batch:
+        #     delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+        #     nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+        #     nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+
         self.weights = [w - (eta / len(mini_batch)) * nw
                         for w, nw in zip(self.weights, nabla_w)]
+        print('debug line 96:', self.biases[0].shape)
         self.biases = [b - (eta / len(mini_batch)) * nb
                        for b, nb in zip(self.biases, nabla_b)]
+        print('debug line 99:', self.biases[0].shape)
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
@@ -99,6 +110,7 @@ class Network:
         activations = [x]  # list to store all the activations, layer by layer
         zs = []  # list to store all the z vectors, layer by layer
         for b, w in zip(self.biases, self.weights):
+            # print('debug line 110:', b.shape, w.shape)  # for debugging
             z = np.dot(w, activation) + b
             zs.append(z)
             activation = sigmoid(z)
@@ -106,8 +118,8 @@ class Network:
         # backward pass
         delta = self.cost_derivative(activations[-1], y) * \
             sigmoid_prime(zs[-1])
-        nabla_b[-1] = delta
-        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        nabla_b[-1] = delta  # debug: sum of columns?
+        nabla_w[-1] = np.matmul(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
         # differently to the notation in Chapter 2 of the book.  Here,
         # l = 1 means the last layer of neurons, l = 2 is the
@@ -117,9 +129,11 @@ class Network:
         for l in range(2, self.num_layers):
             z = zs[-l]
             sp = sigmoid_prime(z)
-            delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
+            delta = np.multiply(
+                np.matmul(self.weights[-l + 1].transpose(), delta), sp)
+            # print('debug line 131:', delta.shape)  # for debugging
             nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+            nabla_w[-l] = np.matmul(delta, activations[-l - 1].transpose())
         return (nabla_b, nabla_w)
 
     def evaluate(self, test_data):
@@ -146,3 +160,16 @@ def sigmoid(z):
 def sigmoid_prime(z):
     """Derivative of the sigmoid function."""
     return sigmoid(z) * (1 - sigmoid(z))
+
+
+
+
+
+import mnist_loader
+training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
+training_data = list(training_data)
+training_data = training_data[1234:1244] + training_data[9876:9886]  # work with small sample only
+net = Network([784, 30, 10])
+# x, y = net.update_mini_batch(training_data, eta=3)
+
+net.SGD(training_data, 3, 10, 1.0, test_data=test_data)
