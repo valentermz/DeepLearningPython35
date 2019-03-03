@@ -37,7 +37,7 @@ class Network:
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
         for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.dot(w, a) + b)
+            a = sigmoid(np.matmul(w, a) + b)
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
@@ -101,7 +101,7 @@ class Network:
         activations = [x]  # list to store all the activations, layer by layer
         zs = []  # list to store all the z vectors, layer by layer
         for b, w in zip(self.biases, self.weights):
-            z = np.dot(w, activation) + b
+            z = np.matmul(w, activation) + b
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
