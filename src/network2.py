@@ -24,7 +24,7 @@ import numpy as np
 
 # Define the quadratic and cross-entropy cost functions
 
-class QuadraticCost(object):
+class QuadraticCost():
 
     @staticmethod
     def fn(a, y):
@@ -40,7 +40,7 @@ class QuadraticCost(object):
         return (a - y) * sigmoid_prime(z)
 
 
-class CrossEntropyCost(object):
+class CrossEntropyCost():
 
     @staticmethod
     def fn(a, y):
@@ -66,7 +66,7 @@ class CrossEntropyCost(object):
 
 
 # Main Network class
-class Network(object):
+class Network():
 
     def __init__(self, sizes, cost=CrossEntropyCost):
         """The list ``sizes`` contains the number of neurons in the respective
@@ -198,19 +198,20 @@ class Network(object):
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
                 print(
-                    "Accuracy on evaluation data: {} / {}".format(self.accuracy(evaluation_data), n_data))
+                    "Accuracy on evaluation data: {} / {}".format(
+                        self.accuracy(evaluation_data), n_data))
 
             # Early stopping:
             if early_stopping_n > 0:
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     no_accuracy_change = 0
-                    #print("Early-stopping: Best so far {}".format(best_accuracy))
+                    # print("Early-stopping: Best so far {}".format(best_accuracy))
                 else:
                     no_accuracy_change += 1
 
                 if (no_accuracy_change == early_stopping_n):
-                    #print("Early-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
+                    # print("Early-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
                     return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
 
         return evaluation_cost, evaluation_accuracy, \
@@ -318,7 +319,6 @@ class Network(object):
             if convert:
                 y = vectorized_result(y)
             cost += self.cost.fn(a, y) / len(data)
-            # '**' - to the power of.
             cost += 0.5 * (lmbda / len(data)) * \
                 sum(np.linalg.norm(w)**2 for w in self.weights)
         return cost
@@ -333,8 +333,8 @@ class Network(object):
         json.dump(data, f)
         f.close()
 
-# Loading a Network
 
+# Loading a Network
 
 def load(filename):
     """Load a neural network from the file ``filename``.  Returns an
