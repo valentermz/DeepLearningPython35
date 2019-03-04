@@ -12,7 +12,7 @@ features.
 
 """
 
-#### Libraries
+# Libraries
 # Standard library
 import json
 import random
@@ -22,7 +22,7 @@ import sys
 import numpy as np
 
 
-#### Define the quadratic and cross-entropy cost functions
+# Define the quadratic and cross-entropy cost functions
 
 class QuadraticCost(object):
 
@@ -32,12 +32,12 @@ class QuadraticCost(object):
         ``y``.
 
         """
-        return 0.5*np.linalg.norm(a-y)**2
+        return 0.5 * np.linalg.norm(a - y)**2
 
     @staticmethod
     def delta(z, a, y):
         """Return the error delta from the output layer."""
-        return (a-y) * sigmoid_prime(z)
+        return (a - y) * sigmoid_prime(z)
 
 
 class CrossEntropyCost(object):
@@ -52,7 +52,7 @@ class CrossEntropyCost(object):
         to the correct value (0.0).
 
         """
-        return np.sum(np.nan_to_num(-y*np.log(a)-(1-y)*np.log(1-a)))
+        return np.sum(np.nan_to_num(-y * np.log(a) - (1 - y) * np.log(1 - a)))
 
     @staticmethod
     def delta(z, a, y):
@@ -62,10 +62,10 @@ class CrossEntropyCost(object):
         consistent with the delta method for other cost classes.
 
         """
-        return (a-y)
+        return (a - y)
 
 
-#### Main Network class
+# Main Network class
 class Network(object):
 
     def __init__(self, sizes, cost=CrossEntropyCost):
@@ -82,7 +82,7 @@ class Network(object):
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.default_weight_initializer()
-        self.cost=cost
+        self.cost = cost
 
     def default_weight_initializer(self):
         """Initialize each weight using a Gaussian distribution with mean 0
@@ -98,7 +98,7 @@ class Network(object):
 
         """
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
-        self.weights = [np.random.randn(y, x)/np.sqrt(x)
+        self.weights = [np.random.randn(y, x) / np.sqrt(x)
                         for x, y in zip(self.sizes[:-1], self.sizes[1:])]
 
     def large_weight_initializer(self):
@@ -128,13 +128,13 @@ class Network(object):
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            lmbda = 0.0,
+            lmbda=0.0,
             evaluation_data=None,
             monitor_evaluation_cost=False,
             monitor_evaluation_accuracy=False,
             monitor_training_cost=False,
             monitor_training_accuracy=False,
-            early_stopping_n = 0):
+            early_stopping_n=0):
         """Train the neural network using mini-batch stochastic gradient
         descent.  The ``training_data`` is a list of tuples ``(x, y)``
         representing the training inputs and the desired outputs.  The
@@ -156,7 +156,7 @@ class Network(object):
         """
 
         # early stopping functionality:
-        best_accuracy=1
+        best_accuracy = 1
 
         training_data = list(training_data)
         n = len(training_data)
@@ -166,8 +166,8 @@ class Network(object):
             n_data = len(evaluation_data)
 
         # early stopping functionality:
-        best_accuracy=0
-        no_accuracy_change=0
+        best_accuracy = 0
+        no_accuracy_change = 0
 
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
@@ -197,7 +197,8 @@ class Network(object):
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
-                print("Accuracy on evaluation data: {} / {}".format(self.accuracy(evaluation_data), n_data))
+                print(
+                    "Accuracy on evaluation data: {} / {}".format(self.accuracy(evaluation_data), n_data))
 
             # Early stopping:
             if early_stopping_n > 0:
@@ -231,9 +232,9 @@ class Network(object):
         nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
         nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
-        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
+        self.weights = [(1 - eta * (lmbda / n)) * w - (eta / len(mini_batch)) * nw
                         for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b-(eta/len(mini_batch))*nb
+        self.biases = [b - (eta / len(mini_batch)) * nb
                        for b, nb in zip(self.biases, nabla_b)]
 
     def backprop(self, x, y):
@@ -299,7 +300,7 @@ class Network(object):
                        for (x, y) in data]
         else:
             results = [(np.argmax(self.feedforward(x)), y)
-                        for (x, y) in data]
+                       for (x, y) in data]
 
         result_accuracy = sum(int(x == y) for (x, y) in results)
         return result_accuracy
@@ -314,9 +315,12 @@ class Network(object):
         cost = 0.0
         for x, y in data:
             a = self.feedforward(x)
-            if convert: y = vectorized_result(y)
-            cost += self.cost.fn(a, y)/len(data)
-            cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights) # '**' - to the power of.
+            if convert:
+                y = vectorized_result(y)
+            cost += self.cost.fn(a, y) / len(data)
+            # '**' - to the power of.
+            cost += 0.5 * (lmbda / len(data)) * \
+                sum(np.linalg.norm(w)**2 for w in self.weights)
         return cost
 
     def save(self, filename):
@@ -329,7 +333,9 @@ class Network(object):
         json.dump(data, f)
         f.close()
 
-#### Loading a Network
+# Loading a Network
+
+
 def load(filename):
     """Load a neural network from the file ``filename``.  Returns an
     instance of Network.
@@ -344,7 +350,9 @@ def load(filename):
     net.biases = [np.array(b) for b in data["biases"]]
     return net
 
-#### Miscellaneous functions
+# Miscellaneous functions
+
+
 def vectorized_result(j):
     """Return a 10-dimensional unit vector with a 1.0 in the j'th position
     and zeroes elsewhere.  This is used to convert a digit (0...9)
@@ -355,10 +363,12 @@ def vectorized_result(j):
     e[j] = 1.0
     return e
 
+
 def sigmoid(z):
     """The sigmoid function."""
-    return 1.0/(1.0+np.exp(-z))
+    return 1.0 / (1.0 + np.exp(-z))
+
 
 def sigmoid_prime(z):
     """Derivative of the sigmoid function."""
-    return sigmoid(z)*(1-sigmoid(z))
+    return sigmoid(z) * (1 - sigmoid(z))
