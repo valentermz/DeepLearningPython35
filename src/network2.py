@@ -1,5 +1,6 @@
 """network2.py
 ~~~~~~~~~~~~~~
+Adapted for python3
 
 An improved version of network.py, implementing the stochastic
 gradient descent learning algorithm for a feedforward neural network.
@@ -123,7 +124,7 @@ class Network(object):
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
         for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.dot(w, a)+b)
+            a = sigmoid(np.matmul(w, a) + b)
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
@@ -170,10 +171,10 @@ class Network(object):
 
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
-        for j in range(epochs):
+        for j in range(epochs):  # What if epochs doesn't divide n_test?
             random.shuffle(training_data)
             mini_batches = [
-                training_data[k:k+mini_batch_size]
+                training_data[k:k + mini_batch_size]
                 for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(
@@ -224,10 +225,12 @@ class Network(object):
         """
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
-        for x, y in mini_batch:
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
-            nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        x = np.column_stack([data_point[0] for data_point in mini_batch])
+        y = np.column_stack([data_point[1] for data_point in mini_batch])
+        delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+        nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+        nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+
         self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
@@ -242,17 +245,17 @@ class Network(object):
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         # feedforward
         activation = x
-        activations = [x] # list to store all the activations, layer by layer
-        zs = [] # list to store all the z vectors, layer by layer
+        activations = [x]  # list to store all the activations, layer by layer
+        zs = []  # list to store all the z vectors, layer by layer
         for b, w in zip(self.biases, self.weights):
-            z = np.dot(w, activation)+b
+            z = np.matmul(w, activation) + b
             zs.append(z)
             activation = sigmoid(z)
             activations.append(activation)
         # backward pass
         delta = (self.cost).delta(zs[-1], activations[-1], y)
-        nabla_b[-1] = delta
-        nabla_w[-1] = np.dot(delta, activations[-2].transpose())
+        nabla_b[-1] = delta.sum(axis=1).reshape(self.biases[-1].shape)
+        nabla_w[-1] = np.matmul(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
         # differently to the notation in Chapter 2 of the book.  Here,
         # l = 1 means the last layer of neurons, l = 2 is the
@@ -262,9 +265,10 @@ class Network(object):
         for l in range(2, self.num_layers):
             z = zs[-l]
             sp = sigmoid_prime(z)
-            delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
-            nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())
+            delta = np.multiply(
+                np.matmul(self.weights[-l + 1].transpose(), delta), sp)
+            nabla_b[-l] = delta.sum(axis=1).reshape(self.biases[-l].shape)
+            nabla_w[-l] = np.matmul(delta, activations[-l - 1].transpose())
         return (nabla_b, nabla_w)
 
     def accuracy(self, data, convert=False):
