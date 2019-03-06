@@ -197,9 +197,7 @@ class Network():
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
-                print(
-                    "Accuracy on evaluation data: {} / {}".format(
-                        self.accuracy(evaluation_data), n_data))
+                print("Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
 
             # Early stopping:
             if early_stopping_n > 0:
@@ -214,16 +212,22 @@ class Network():
                     # print("Early-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
                     return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
 
-        # Always return cost/accuracy values
-        if not monitor_training_cost:
-            training_cost = [self.total_cost(training_data, lmbda)]
-        if not monitor_training_accuracy:
-            training_accuracy = [self.accuracy(training_data, convert=True)]
-        if not monitor_evaluation_cost:
-            evaluation_cost = [self.total_cost(
-                evaluation_data, lmbda, convert=True)]
-        if not monitor_evaluation_accuracy:
-            evaluation_accuracy = [self.accuracy(evaluation_data)]
+        # Always append accuracy and cost (values with no regularization)
+        cost = self.total_cost(training_data, 0)
+        training_cost.append(cost)
+        print("Final cost on training data: {0:.2f}".format(cost))
+
+        accuracy = self.accuracy(training_data, convert=True)
+        training_accuracy.append(accuracy)
+        print("Final accuracy on training data: {} / {}".format(accuracy, n))
+
+        cost = self.total_cost(evaluation_data, 0, convert=True)
+        evaluation_cost.append(cost)
+        print("Final cost on evaluation data: {0:.2f}".format(cost))
+
+        accuracy = self.accuracy(evaluation_data)
+        evaluation_accuracy.append(accuracy)
+        print("Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
 
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
