@@ -180,12 +180,12 @@ class Network():
                 self.update_mini_batch(
                     mini_batch, eta, lmbda, len(training_data))
 
-            print("Epoch %s training complete" % j)
+            print("\nEpoch %s training complete" % j)
 
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
-                print("Cost on training data: {}".format(cost))
+                print("Cost on training data: {0:.2f}".format(cost))
             if monitor_training_accuracy:
                 accuracy = self.accuracy(training_data, convert=True)
                 training_accuracy.append(accuracy)
@@ -193,7 +193,7 @@ class Network():
             if monitor_evaluation_cost:
                 cost = self.total_cost(evaluation_data, lmbda, convert=True)
                 evaluation_cost.append(cost)
-                print("Cost on evaluation data: {}".format(cost))
+                print("Cost on evaluation data: {0:.2f}".format(cost))
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
@@ -213,6 +213,17 @@ class Network():
                 if (no_accuracy_change == early_stopping_n):
                     # print("Early-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
                     return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
+
+        # Always return cost/accuracy values
+        if not monitor_training_cost:
+            training_cost = [self.total_cost(training_data, lmbda)]
+        if not monitor_training_accuracy:
+            training_accuracy = [self.accuracy(training_data, convert=True)]
+        if not monitor_evaluation_cost:
+            evaluation_cost = [self.total_cost(
+                evaluation_data, lmbda, convert=True)]
+        if not monitor_evaluation_accuracy:
+            evaluation_accuracy = [self.accuracy(evaluation_data)]
 
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
@@ -350,8 +361,8 @@ def load(filename):
     net.biases = [np.array(b) for b in data["biases"]]
     return net
 
-# Miscellaneous functions
 
+# Miscellaneous functions
 
 def vectorized_result(j):
     """Return a 10-dimensional unit vector with a 1.0 in the j'th position
