@@ -331,13 +331,15 @@ class Network():
         reversed) convention for the ``accuracy`` method, above.
         """
         cost = 0.0
+        # Unregularized cost
         for x, y in data:
             a = self.feedforward(x)
             if convert:
                 y = vectorized_result(y)
             cost += self.cost.fn(a, y) / len(data)
-            cost += 0.5 * (lmbda / len(data)) * \
-                sum(np.linalg.norm(w)**2 for w in self.weights)
+        # Regularization cost
+        cost += 0.5 * (lmbda / len(data)) * \
+            sum(np.linalg.norm(w)**2 for w in self.weights)
         return cost
 
     def save(self, filename):
