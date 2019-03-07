@@ -9,7 +9,6 @@ regularization, and better initialization of network weights.  Note
 that I have focused on making the code simple, easily readable, and
 easily modifiable.  It is not optimized, and omits many desirable
 features.
-
 """
 
 # Libraries
@@ -28,10 +27,7 @@ class QuadraticCost():
 
     @staticmethod
     def fn(a, y):
-        """Return the cost associated with an output ``a`` and desired output
-        ``y``.
-
-        """
+        """Return the cost associated with an output ``a`` and desired output ``y``."""
         return 0.5 * np.linalg.norm(a - y)**2
 
     @staticmethod
@@ -50,7 +46,6 @@ class CrossEntropyCost():
         in the same slot, then the expression (1-y)*np.log(1-a)
         returns nan.  The np.nan_to_num ensures that that is converted
         to the correct value (0.0).
-
         """
         return np.sum(np.nan_to_num(-y * np.log(a) - (1 - y) * np.log(1 - a)))
 
@@ -60,7 +55,6 @@ class CrossEntropyCost():
         parameter ``z`` is not used by the method.  It is included in
         the method's parameters in order to make the interface
         consistent with the delta method for other cost classes.
-
         """
         return (a - y)
 
@@ -77,7 +71,6 @@ class Network():
         are initialized randomly, using
         ``self.default_weight_initializer`` (see docstring for that
         method).
-
         """
         self.num_layers = len(sizes)
         self.sizes = sizes
@@ -95,7 +88,6 @@ class Network():
         by convention we won't set any biases for those neurons, since
         biases are only ever used in computing the outputs from later
         layers.
-
         """
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         self.weights = [np.random.randn(y, x) / np.sqrt(x)
@@ -115,7 +107,6 @@ class Network():
         Chapter 1, and is included for purposes of comparison.  It
         will usually be better to use the default weight initializer
         instead.
-
         """
         self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
         self.weights = [np.random.randn(y, x)
@@ -152,13 +143,8 @@ class Network():
         will be a 30-element list containing the cost on the
         evaluation data at the end of each epoch. Note that the lists
         are empty if the corresponding flag is not set.
-
         """
-
-        # early stopping functionality:
-        best_accuracy = 1
-
-        training_data = list(training_data)
+        training_data = list(training_data)  # Check
         n = len(training_data)
 
         if evaluation_data:
@@ -168,10 +154,12 @@ class Network():
         # early stopping functionality:
         best_accuracy = 0
         no_accuracy_change = 0
+        if early_stopping_n > 0:
+            monitor_evaluation_accuracy = True
 
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
-        for j in range(epochs):  # What if epochs doesn't divide n_test?
+        for j in range(epochs):  # Check: what if epochs doesn't divide n_test?
             random.shuffle(training_data)
             mini_batches = [
                 training_data[k:k + mini_batch_size]
@@ -181,11 +169,10 @@ class Network():
                     mini_batch, eta, lmbda, len(training_data))
 
             print("\nEpoch %s training complete" % j)
-
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
-                print("Cost on training data: {0:.2f}".format(cost))
+                print("Cost on training data: {0:.4f}".format(cost))
             if monitor_training_accuracy:
                 accuracy = self.accuracy(training_data, convert=True)
                 training_accuracy.append(accuracy)
@@ -193,7 +180,7 @@ class Network():
             if monitor_evaluation_cost:
                 cost = self.total_cost(evaluation_data, lmbda, convert=True)
                 evaluation_cost.append(cost)
-                print("Cost on evaluation data: {0:.2f}".format(cost))
+                print("Cost on evaluation data: {0:.4f}".format(cost))
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
@@ -204,27 +191,45 @@ class Network():
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     no_accuracy_change = 0
-                    # print("Early-stopping: Best so far {}".format(best_accuracy))
+                    print("Early-stopping: Best so far {}".format(best_accuracy))
                 else:
                     no_accuracy_change += 1
+                    print("Early-stopping: Best so far {}".format(best_accuracy))
 
                 if (no_accuracy_change == early_stopping_n):
-                    # print("Early-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
-                    return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
+                    print(
+                        "\nEarly-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
+                    # Always append accuracy and cost (values with no
+                    # regularization)
+                    cost = self.total_cost(training_data, 0)
+                    training_cost.append(cost)
+                    print("Final cost on training data: {0:.4f}".format(cost))
+                    accuracy = self.accuracy(training_data, convert=True)
+                    training_accuracy.append(accuracy)
+                    print(
+                        "Final accuracy on training data: {} / {}".format(accuracy, n))
+                    cost = self.total_cost(evaluation_data, 0, convert=True)
+                    evaluation_cost.append(cost)
+                    print(
+                        "Final cost on evaluation data: {0:.4f}".format(cost))
+                    accuracy = self.accuracy(evaluation_data)
+                    evaluation_accuracy.append(accuracy)
+                    print(
+                        "Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
+
+                    return evaluation_cost, evaluation_accuracy, \
+                        training_cost, training_accuracy
 
         # Always append accuracy and cost (values with no regularization)
         cost = self.total_cost(training_data, 0)
         training_cost.append(cost)
-        print("Final cost on training data: {0:.2f}".format(cost))
-
+        print("\nFinal cost on training data: {0:.4f}".format(cost))
         accuracy = self.accuracy(training_data, convert=True)
         training_accuracy.append(accuracy)
         print("Final accuracy on training data: {} / {}".format(accuracy, n))
-
         cost = self.total_cost(evaluation_data, 0, convert=True)
         evaluation_cost.append(cost)
-        print("Final cost on evaluation data: {0:.2f}".format(cost))
-
+        print("Final cost on evaluation data: {0:.4f}".format(cost))
         accuracy = self.accuracy(evaluation_data)
         evaluation_accuracy.append(accuracy)
         print("Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
@@ -238,7 +243,6 @@ class Network():
         ``mini_batch`` is a list of tuples ``(x, y)``, ``eta`` is the
         learning rate, ``lmbda`` is the regularization parameter, and
         ``n`` is the total size of the training data set.
-
         """
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
@@ -257,7 +261,8 @@ class Network():
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
         gradient for the cost function C_x.  ``nabla_b`` and
         ``nabla_w`` are layer-by-layer lists of numpy arrays, similar
-        to ``self.biases`` and ``self.weights``."""
+        to ``self.biases`` and ``self.weights``.
+        """
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         # feedforward
@@ -309,7 +314,6 @@ class Network():
         representations speeds things up.  More details on the
         representations can be found in
         mnist_loader.load_data_wrapper.
-
         """
         if convert:
             results = [(np.argmax(self.feedforward(x)), np.argmax(y))
@@ -317,9 +321,7 @@ class Network():
         else:
             results = [(np.argmax(self.feedforward(x)), y)
                        for (x, y) in data]
-
-        result_accuracy = sum(int(x == y) for (x, y) in results)
-        return result_accuracy
+        return sum(int(x == y) for (x, y) in results)
 
     def total_cost(self, data, lmbda, convert=False):
         """Return the total cost for the data set ``data``.  The flag
@@ -350,11 +352,9 @@ class Network():
 
 
 # Loading a Network
-
 def load(filename):
     """Load a neural network from the file ``filename``.  Returns an
     instance of Network.
-
     """
     f = open(filename, "r")
     data = json.load(f)
@@ -367,12 +367,10 @@ def load(filename):
 
 
 # Miscellaneous functions
-
 def vectorized_result(j):
     """Return a 10-dimensional unit vector with a 1.0 in the j'th position
     and zeroes elsewhere.  This is used to convert a digit (0...9)
     into a corresponding desired output from the neural network.
-
     """
     e = np.zeros((10, 1))
     e[j] = 1.0
