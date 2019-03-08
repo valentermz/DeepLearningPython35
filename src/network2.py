@@ -144,12 +144,18 @@ class Network():
         evaluation data at the end of each epoch. Note that the lists
         are empty if the corresponding flag is not set.
         """
-        training_data = list(training_data)  # Check
+        training_data = list(training_data)
         n = len(training_data)
-
+        training_inputs = np.column_stack([data[0] for data in training_data])
+        training_results = np.column_stack([data[1] for data in training_data])
+        
         if evaluation_data:
             evaluation_data = list(evaluation_data)
             n_data = len(evaluation_data)
+            evaluation_inputs = np.column_stack(
+                [data[0] for data in evaluation_data])
+            evaluation_results = np.column_stack(
+                [vectorized_result(data[1]) for data in evaluation_data])
 
         # early stopping functionality:
         best_accuracy = 0
@@ -157,6 +163,7 @@ class Network():
         if early_stopping_n > 0:
             monitor_evaluation_accuracy = True
 
+        # Main loop. Call to ``update_mini_batch``:
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
         for j in range(epochs):  # Check: what if epochs doesn't divide n_test?
@@ -166,11 +173,12 @@ class Network():
                 for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(
-                    mini_batch, eta, lmbda, len(training_data))
+                    mini_batch, eta, lmbda, n)
 
+            # End of epoch info:
             print("\nEpoch %s training complete" % j)
             if monitor_training_cost:
-                cost = self.total_cost(training_data, lmbda)
+                cost = self.total_cost(training_inputs, training_results, lmbda)
                 training_cost.append(cost)
                 print("Cost on training data: {0:.4f}".format(cost))
             if monitor_training_accuracy:
@@ -178,7 +186,7 @@ class Network():
                 training_accuracy.append(accuracy)
                 print("Accuracy on training data: {} / {}".format(accuracy, n))
             if monitor_evaluation_cost:
-                cost = self.total_cost(evaluation_data, lmbda, convert=True)
+                cost = self.total_cost(evaluation_inputs, evaluation_results, lmbda)
                 evaluation_cost.append(cost)
                 print("Cost on evaluation data: {0:.4f}".format(cost))
             if monitor_evaluation_accuracy:
@@ -201,38 +209,35 @@ class Network():
                         "\nEarly-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
                     # Always append accuracy and cost (values with no
                     # regularization)
-                    cost = self.total_cost(training_data, 0)
+                    cost = self.total_cost(training_inputs, training_results, lmbda=0)
                     training_cost.append(cost)
-                    print("Final cost on training data: {0:.4f}".format(cost))
+                    print("Final cost on training data: {0:.6f}".format(cost))
                     accuracy = self.accuracy(training_data, convert=True)
                     training_accuracy.append(accuracy)
-                    print(
-                        "Final accuracy on training data: {} / {}".format(accuracy, n))
-                    cost = self.total_cost(evaluation_data, 0, convert=True)
+                    print("Final accuracy on training data: {} / {}".format(accuracy, n))
+                    cost = self.total_cost(evaluation_inputs, evaluation_results, lmbda=0)
                     evaluation_cost.append(cost)
-                    print(
-                        "Final cost on evaluation data: {0:.4f}".format(cost))
+                    print("Final cost on evaluation data: {0:.6f}".format(cost))
                     accuracy = self.accuracy(evaluation_data)
                     evaluation_accuracy.append(accuracy)
-                    print(
-                        "Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
+                    print("Final accuracy on evaluation data: {} / {}".format(accuracy, n_data))
 
                     return evaluation_cost, evaluation_accuracy, \
                         training_cost, training_accuracy
 
         # Always append accuracy and cost (values with no regularization)
-        cost = self.total_cost(training_data, 0)
+        cost = self.total_cost(training_inputs, training_results, lmbda=0)
         training_cost.append(cost)
-        print("\nFinal cost on training data: {0:.4f}".format(cost))
+        print("\nFinal cost on training data: {0:.6f}".format(cost))
         accuracy = self.accuracy(training_data, convert=True)
         training_accuracy.append(accuracy)
         print("Final accuracy on training data: {} / {}".format(accuracy, n))
-        cost = self.total_cost(evaluation_data, 0, convert=True)
+        cost = self.total_cost(evaluation_inputs, evaluation_results, lmbda=0)
         evaluation_cost.append(cost)
-        print("Final cost on evaluation data: {0:.4f}".format(cost))
+        print("Final cost on evaluation data: {0:.6f}".format(cost))
         accuracy = self.accuracy(evaluation_data)
         evaluation_accuracy.append(accuracy)
-        print("Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
+        print("Final accuracy on evaluation data: {} / {}".format(accuracy, n_data))
 
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
@@ -323,12 +328,13 @@ class Network():
                        for (x, y) in data]
         return sum(int(x == y) for (x, y) in results)
 
-    def total_cost(self, data, lmbda, convert=False):
+    def total_cost(self, data_inputs, data_results, lmbda):
         """Return the total cost for the data set ``data``.  The flag
         ``convert`` should be set to False if the data set is the
         training data (the usual case), and to True if the data set is
         the validation or test data.  See comments on the similar (but
         reversed) convention for the ``accuracy`` method, above.
+        """
         """
         cost = 0.0
         # Unregularized cost
@@ -340,6 +346,15 @@ class Network():
         # Regularization cost
         cost += 0.5 * (lmbda / len(data)) * \
             sum(np.linalg.norm(w)**2 for w in self.weights)
+        """
+        cost = 0.0
+        N = len(data_inputs)
+        a = self.feedforward(data_inputs)
+        # Prediction cost
+        cost += self.cost.fn(a, data_results) / N
+        # Regularization cost
+        cost += 0.5 * (lmbda / N) * sum(
+            np.linalg.norm(w)**2 for w in self.weights)
         return cost
 
     def save(self, filename):
