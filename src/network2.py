@@ -115,7 +115,7 @@ class Network():
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
         for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.matmul(w, a) + b)
+            a = sigmoid(np.matmul(w, a) + b) #sigmoid
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
@@ -284,7 +284,7 @@ class Network():
         for b, w in zip(self.biases, self.weights):
             z = np.matmul(w, activation) + b
             zs.append(z)
-            activation = sigmoid(z)
+            activation = sigmoid(z) #sigmoid
             activations.append(activation)
         # backward pass
         delta = (self.cost).delta(zs[-1], activations[-1], y)
@@ -298,7 +298,7 @@ class Network():
         # that Python can use negative indices in lists.
         for l in range(2, self.num_layers):
             z = zs[-l]
-            sp = sigmoid_prime(z)
+            sp = sigmoid_prime(z) 
             delta = np.multiply(
                 np.matmul(self.weights[-l + 1].transpose(), delta), sp)
             nabla_b[-l] = delta.sum(axis=1).reshape(self.biases[-l].shape)
@@ -403,6 +403,7 @@ def vectorized_result(j):
     return e
 
 
+# Sigmoid units
 def sigmoid(z):
     """The sigmoid function."""
     return 1.0 / (1.0 + np.exp(-z))
@@ -411,3 +412,25 @@ def sigmoid(z):
 def sigmoid_prime(z):
     """Derivative of the sigmoid function."""
     return sigmoid(z) * (1 - sigmoid(z))
+
+
+# Rectified linear units
+def reLU(z):
+    """Rectifying function."""
+    return np.maximum(z, 0)
+
+
+def reLU_prime(z):
+    """Derivative of rectifying function."""
+    return np.piecewise(z, [z < 0, z >= 0], [0, 1])
+
+
+# Tanh units
+def tanh(z):
+    """Hyperbolic tangent function."""
+    return np.tanh(z)
+
+
+def tanh_prime(z):
+    """Derivative of hyperbolic tangent function."""
+    return 1 - tanh(z)**2
