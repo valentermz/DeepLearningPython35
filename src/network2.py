@@ -11,13 +11,9 @@ easily modifiable.  It is not optimized, and omits many desirable
 features.
 """
 
-# Libraries
-# Standard library
 import json
 import random
 import sys
-
-# Third-party libraries
 import numpy as np
 
 
@@ -31,9 +27,9 @@ class QuadraticCost():
         return 0.5 * np.linalg.norm(a - y)**2
 
     @staticmethod
-    def delta(z, a, y):
+    def delta(z, a, y, neuron_type):
         """Return the error delta from the output layer."""
-        return (a - y) * sigmoid_prime(z)
+        return (a - y) * neuron_type.activation_prime(z)
 
 
 class CrossEntropyCost():
@@ -50,7 +46,7 @@ class CrossEntropyCost():
         return np.sum(np.nan_to_num(-y * np.log(a) - (1 - y) * np.log(1 - a)))
 
     @staticmethod
-    def delta(z, a, y):
+    def delta(z, a, y, neuron_type):
         """Return the error delta from the output layer.  Note that the
         parameter ``z`` is not used by the method.  It is included in
         the method's parameters in order to make the interface
@@ -59,10 +55,55 @@ class CrossEntropyCost():
         return (a - y)
 
 
+# Define the different possible classes of neurons:
+
+class Sigmoid():
+    """Can be implemented with both QuadraticCost and CrossEntropyCost"""
+
+    @staticmethod
+    def activation(z):
+        """The sigmoid function."""
+        return 1.0 / (1.0 + np.exp(-z))
+
+    @staticmethod
+    def activation_prime(z):
+        """Derivative of the sigmoid function."""
+        return Sigmoid.activation(z) * (1 - Sigmoid.activation(z))
+
+
+class ReLU():
+    """Should be implemented with QuadraticCost"""
+
+    @staticmethod
+    def activation(z):
+        """Rectifying function."""
+        return np.maximum(z, 0)
+
+    @staticmethod
+    def activation_prime(z):
+        """Derivative of rectifying function."""
+        return np.piecewise(z, [z < 0, z >= 0], [0, 1])
+
+
+class Tanh():
+    """Should be implemented with QuadraticCost"""
+
+    @staticmethod
+    def activation(z):
+        """Hyperbolic tangent function."""
+        return np.tanh(z)
+
+    @staticmethod
+    def activation_prime(z):
+        """Derivative of hyperbolic tangent function."""
+        return 1 - np.tanh(z)**2
+
+
 # Main Network class
+
 class Network():
 
-    def __init__(self, sizes, cost=CrossEntropyCost):
+    def __init__(self, sizes, neuron_type=Sigmoid, cost=CrossEntropyCost):
         """The list ``sizes`` contains the number of neurons in the respective
         layers of the network.  For example, if the list was [2, 3, 1]
         then it would be a three-layer network, with the first layer
@@ -75,7 +116,11 @@ class Network():
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.default_weight_initializer()
+        self.neuron_type = neuron_type
         self.cost = cost
+
+    def __repr__(self):
+        return '<Network : {} {} {}>'.format(self.sizes, self.neuron_type, self.cost)
 
     def default_weight_initializer(self):
         """Initialize each weight using a Gaussian distribution with mean 0
@@ -115,7 +160,7 @@ class Network():
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
         for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.matmul(w, a) + b) #sigmoid
+            a = self.neuron_type.activation(np.matmul(w, a) + b)
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
@@ -284,10 +329,10 @@ class Network():
         for b, w in zip(self.biases, self.weights):
             z = np.matmul(w, activation) + b
             zs.append(z)
-            activation = sigmoid(z) #sigmoid
+            activation = self.neuron_type.activation(z)
             activations.append(activation)
         # backward pass
-        delta = (self.cost).delta(zs[-1], activations[-1], y)
+        delta = (self.cost).delta(zs[-1], activations[-1], y, self.neuron_type)
         nabla_b[-1] = delta.sum(axis=1).reshape(self.biases[-1].shape)
         nabla_w[-1] = np.matmul(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
@@ -298,7 +343,7 @@ class Network():
         # that Python can use negative indices in lists.
         for l in range(2, self.num_layers):
             z = zs[-l]
-            sp = sigmoid_prime(z) 
+            sp = self.neuron_type.activation_prime(z)
             delta = np.multiply(
                 np.matmul(self.weights[-l + 1].transpose(), delta), sp)
             nabla_b[-l] = delta.sum(axis=1).reshape(self.biases[-l].shape)
@@ -341,18 +386,6 @@ class Network():
         training data (the usual case), and to True if the data set is
         the validation or test data.  See comments on the similar (but
         reversed) convention for the ``accuracy`` method, above.
-        """
-        """
-        cost = 0.0
-        # Unregularized cost
-        for x, y in data:
-            a = self.feedforward(x)
-            if convert:
-                y = vectorized_result(y)
-            cost += self.cost.fn(a, y) / len(data)
-        # Regularization cost
-        cost += 0.5 * (lmbda / len(data)) * \
-            sum(np.linalg.norm(w)**2 for w in self.weights)
         """
         cost = 0.0
         N = data_inputs.shape[1]
@@ -401,36 +434,3 @@ def vectorized_result(j):
     e = np.zeros((10, 1))
     e[j] = 1.0
     return e
-
-
-# Sigmoid units
-def sigmoid(z):
-    """The sigmoid function."""
-    return 1.0 / (1.0 + np.exp(-z))
-
-
-def sigmoid_prime(z):
-    """Derivative of the sigmoid function."""
-    return sigmoid(z) * (1 - sigmoid(z))
-
-
-# Rectified linear units
-def reLU(z):
-    """Rectifying function."""
-    return np.maximum(z, 0)
-
-
-def reLU_prime(z):
-    """Derivative of rectifying function."""
-    return np.piecewise(z, [z < 0, z >= 0], [0, 1])
-
-
-# Tanh units
-def tanh(z):
-    """Hyperbolic tangent function."""
-    return np.tanh(z)
-
-
-def tanh_prime(z):
-    """Derivative of hyperbolic tangent function."""
-    return 1 - tanh(z)**2
