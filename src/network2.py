@@ -23,7 +23,7 @@ class QuadraticCost():
 
     @staticmethod
     def fn(a, y):
-        """Return the cost associated with an output ``a`` and desired output ``y``."""
+        """Return cost associated with an output ``a`` and target ``y``."""
         return 0.5 * np.linalg.norm(a - y)**2
 
     @staticmethod
@@ -193,7 +193,7 @@ class Network():
         evaluation accuracy for ``early_stopping_n`` epochs.
         If ``learning_schedule`` is False, the action is abort the
         training over all. If set to True, the action is to half the
-        learning rate. After 7 cycles the training aborts.
+        learning rate. After 8 cycles the training aborts.
         """
         training_data = list(training_data)
         n = len(training_data)
@@ -202,7 +202,7 @@ class Network():
 
         if evaluation_data:
             evaluation_data = list(evaluation_data)
-            n_data = len(evaluation_data)
+            m = len(evaluation_data)
             evaluation_inputs = np.column_stack(
                 [data[0] for data in evaluation_data])
             evaluation_results = np.column_stack(
@@ -213,6 +213,8 @@ class Network():
             learning_cycle = 0
             if early_stopping_n == 0:
                 early_stopping_n = 10
+        else:
+            learning_cycle = 8  # ie first cycle is the last cycle
 
         # Early stopping functionality:
         best_accuracy = 0
@@ -223,7 +225,7 @@ class Network():
         # Main loop. Call to ``update_mini_batch``:
         evaluation_cost, evaluation_accuracy = [], []
         training_cost, training_accuracy = [], []
-        for j in range(epochs):  # Check: what if epochs doesn't divide n_test?
+        for j in range(epochs):  # Check: what if mini_batch_size doesn't divide n_test?
             random.shuffle(training_data)
             mini_batches = [
                 training_data[k:k + mini_batch_size]
@@ -251,64 +253,42 @@ class Network():
             if monitor_evaluation_accuracy:
                 accuracy = self.accuracy(evaluation_data)
                 evaluation_accuracy.append(accuracy)
-                print("Accuracy on evaluation data: {} / {}".format(accuracy, n_data))
+                print("Accuracy on evaluation data: {} / {}".format(accuracy, m))
 
-            # Early stopping:
+            # Early stopping & learning schedule:
             if early_stopping_n > 0:
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     no_accuracy_change = 0
-                    print("Early-stopping: Best so far {}".format(best_accuracy))
+                    print("Early-stopping: Best so far: "
+                          + "{}".format(best_accuracy))
                 else:
                     no_accuracy_change += 1
-                    print("Early-stopping: Best so far {}".format(best_accuracy))
+                    print("Early-stopping: Best so far: "
+                          + "{}".format(best_accuracy))
 
                 if (no_accuracy_change == early_stopping_n):
-                    print(
-                        "\nEarly-stopping: No accuracy change in last epochs: {}".format(early_stopping_n))
+                    if learning_schedule is True and learning_cycle <= 7:
+                        no_accuracy_change = 0
+                        learning_cycle += 1
+                        eta = eta / 2
+                        print("\nEarly-stopping: "
+                              + "No accuracy change in last epochs: "
+                              + "{}".format(early_stopping_n))
+                        print("Begin learning cycle "
+                              + "{}".format(learning_cycle + 1))
+                        print("Learning schedule: New learning rate: "
+                              + "{}".format(eta))
+                    else:
+                        self.end_of_training_analysis(
+                            training_data, training_inputs,
+                            training_results, evaluation_data,
+                            evaluation_inputs, evaluation_results)
 
-                    # # Append final results
-                    # cost = self.total_cost(
-                    #     training_inputs, training_results, lmbda=0)
-                    # training_cost.append(cost)
-                    # print("Final cost on training data: {0:.6f}".format(cost))
-                    # accuracy = self.accuracy(training_data, convert=True)
-                    # training_accuracy.append(accuracy)
-                    # print(
-                    #     "Final accuracy on training data: {} / {}".format(accuracy, n))
-                    # cost = self.total_cost(
-                    #     evaluation_inputs, evaluation_results, lmbda=0)
-                    # evaluation_cost.append(cost)
-                    # print(
-                    #     "Final cost on evaluation data: {0:.6f}".format(cost))
-                    # accuracy = self.accuracy(evaluation_data)
-                    # evaluation_accuracy.append(accuracy)
-                    # print(
-                    #     "Final accuracy on evaluation data: {} / {}".format(accuracy, n_data))
+                        return evaluation_cost, evaluation_accuracy, \
+                            training_cost, training_accuracy
 
-                    self.end_of_training_analysis(
-                        training_data, training_inputs,
-                        training_results, evaluation_data,
-                        evaluation_inputs, evaluation_results)
-
-                    return evaluation_cost, evaluation_accuracy, \
-                        training_cost, training_accuracy
-
-        # # Always append accuracy and cost (values with no regularization)
-        # cost = self.total_cost(training_inputs, training_results, lmbda=0)
-        # training_cost.append(cost)
-        # print("\nFinal cost on training data: {0:.6f}".format(cost))
-        # accuracy = self.accuracy(training_data, convert=True)
-        # training_accuracy.append(accuracy)
-        # print("Final accuracy on training data: {} / {}".format(accuracy, n))
-        # cost = self.total_cost(evaluation_inputs, evaluation_results, lmbda=0)
-        # evaluation_cost.append(cost)
-        # print("Final cost on evaluation data: {0:.6f}".format(cost))
-        # accuracy = self.accuracy(evaluation_data)
-        # evaluation_accuracy.append(accuracy)
-        # print("Final accuracy on evaluation data: {} / {}".format(accuracy,
-        # n_data))
-
+        print("\nTraining done: {} epochs completed".format(epochs))
         self.end_of_training_analysis(
             training_data, training_inputs, training_results,
             evaluation_data, evaluation_inputs, evaluation_results)
@@ -435,13 +415,15 @@ class Network():
                                  training_results, evaluation_data,
                                  evaluation_inputs, evaluation_results):
         cost = self.total_cost(training_inputs, training_results, lmbda=0)
-        print("Final cost on training data: {0:.6f}".format(cost))
+        print("\nFinal cost on training data: {0:.6f}".format(cost))
         accuracy = self.accuracy(training_data, convert=True)
-        print("Final accuracy on training data: {} / {}".format(accuracy, len(training_data)))
+        print("Final accuracy on training data: "
+              + "{} / {}".format(accuracy, len(training_data)))
         cost = self.total_cost(evaluation_inputs, evaluation_results, lmbda=0)
         print("Final cost on evaluation data: {0:.6f}".format(cost))
         accuracy = self.accuracy(evaluation_data)
-        print("Final accuracy on evaluation data: {} / {}".format(accuracy, len(evaluation_data)))
+        print("Final accuracy on evaluation data: "
+              + "{} / {}".format(accuracy, len(evaluation_data)))
 
 
 # Loading a Network
@@ -449,13 +431,13 @@ def load(filename):
     """Load a neural network from the file ``filename``.  Returns an
     instance of Network.
     """
-    f=open(filename, "r")
-    data=json.load(f)
+    f = open(filename, "r")
+    data = json.load(f)
     f.close()
-    cost=getattr(sys.modules[__name__], data["cost"])
-    net=Network(data["sizes"], cost=cost)
-    net.weights=[np.array(w) for w in data["weights"]]
-    net.biases=[np.array(b) for b in data["biases"]]
+    cost = getattr(sys.modules[__name__], data["cost"])
+    net = Network(data["sizes"], cost=cost)
+    net.weights = [np.array(w) for w in data["weights"]]
+    net.biases = [np.array(b) for b in data["biases"]]
     return net
 
 
@@ -465,6 +447,6 @@ def vectorized_result(j):
     and zeroes elsewhere.  This is used to convert a digit (0...9)
     into a corresponding desired output from the neural network.
     """
-    e=np.zeros((10, 1))
-    e[j]=1.0
+    e = np.zeros((10, 1))
+    e[j] = 1.0
     return e
