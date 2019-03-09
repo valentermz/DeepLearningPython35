@@ -138,6 +138,12 @@ class Network():
         self.weights = [np.random.randn(y, x) / np.sqrt(x)
                         for x, y in zip(self.sizes[:-1], self.sizes[1:])]
 
+    def positive_weight_initializer(self):
+        for k in range(len(self.biases)):
+            self.biases[k] = np.absolute(self.biases[k])
+        for k in range(len(self.weights)):
+            self.weights[k] = np.absolute(self.weights[k])
+
     def large_weight_initializer(self):
         """Initialize the weights using a Gaussian distribution with mean 0
         and standard deviation 1.  Initialize the biases using a
