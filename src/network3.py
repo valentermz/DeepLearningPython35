@@ -36,7 +36,7 @@ import gzip
 import numpy as np
 import theano
 import theano.tensor as T
-from theano.tensor.nnet import conv
+from theano.tensor.nnet import conv, conv2d
 from theano.tensor.nnet import softmax
 from theano.tensor import shared_randomstreams
 from theano.tensor.signal.pool import pool_2d
@@ -49,7 +49,7 @@ from theano.tensor import tanh
 
 
 #### Constants
-GPU = True
+GPU = False
 if GPU:
     print("Trying to run under a GPU.  If this is not desired, then modify "+\
         "network3.py\nto set the GPU flag to False.")
@@ -61,7 +61,7 @@ else:
         "network3.py to set\nthe GPU flag to True.")
 
 #### Load the MNIST data
-def load_data_shared(filename="mnist.pkl.gz"):
+def load_data_shared(filename="../data/mnist.pkl.gz"):
     f = gzip.open(filename, 'rb')
     training_data, validation_data, test_data = pickle.load(f, encoding="latin1")
     f.close()
@@ -190,13 +190,13 @@ class ConvPoolLayer(object):
 
     """
 
-    def __init__(self, filter_shape, image_shape, poolsize=(2, 2),
+    def __init__(self, filter_shape, input_shape, poolsize=(2, 2),
                  activation_fn=sigmoid):
         """`filter_shape` is a tuple of length 4, whose entries are the number
         of filters, the number of input feature maps, the filter height, and the
         filter width.
 
-        `image_shape` is a tuple of length 4, whose entries are the
+        `input_shape` is a tuple of length 4, whose entries are the
         mini-batch size, the number of input feature maps, the image
         height, and the image width.
 
@@ -205,7 +205,7 @@ class ConvPoolLayer(object):
 
         """
         self.filter_shape = filter_shape
-        self.image_shape = image_shape
+        self.input_shape = input_shape
         self.poolsize = poolsize
         self.activation_fn=activation_fn
         # initialize weights and biases
@@ -223,10 +223,10 @@ class ConvPoolLayer(object):
         self.params = [self.w, self.b]
 
     def set_inpt(self, inpt, inpt_dropout, mini_batch_size):
-        self.inpt = inpt.reshape(self.image_shape)
-        conv_out = conv.conv2d(
+        self.inpt = inpt.reshape(self.input_shape)
+        conv_out = conv2d(
             input=self.inpt, filters=self.w, filter_shape=self.filter_shape,
-            image_shape=self.image_shape)
+            input_shape=self.input_shape)
         pooled_out = pool_2d(
             input=conv_out, ws=self.poolsize, ignore_border=True)
         self.output = self.activation_fn(
