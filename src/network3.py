@@ -27,7 +27,7 @@ from Chris Olah (http://colah.github.io ).
 
 """
 
-#### Libraries
+# Libraries
 # Standard library
 import pickle
 import gzip
@@ -36,35 +36,40 @@ import gzip
 import numpy as np
 import theano
 import theano.tensor as T
-from theano.tensor.nnet import conv, conv2d
-from theano.tensor.nnet import softmax
-from theano.tensor import shared_randomstreams
+from theano.tensor.nnet import conv, conv2d, softmax, sigmoid
+from theano.tensor import shared_randomstreams, tanh
 from theano.tensor.signal.pool import pool_2d
+
 
 # Activation functions for neurons
 def linear(z): return z
+
+
 def ReLU(z): return T.maximum(0.0, z)
-from theano.tensor.nnet import sigmoid
-from theano.tensor import tanh
 
 
-#### Constants
+# Constants
 GPU = False
 if GPU:
-    print("Trying to run under a GPU.  If this is not desired, then modify "+\
-        "network3.py\nto set the GPU flag to False.")
-    try: theano.config.device = 'gpu'
-    except: pass # it's already set
+    print("Trying to run under a GPU.  If this is not desired, then modify " +
+          "network3.py\nto set the GPU flag to False.")
+    try:
+        theano.config.device = 'gpu'
+    except:
+        pass  # it's already set
     theano.config.floatX = 'float32'
 else:
-    print("Running with a CPU.  If this is not desired, then the modify "+\
-        "network3.py to set\nthe GPU flag to True.")
+    print("Running with a CPU.  If this is not desired, then the modify " +
+          "network3.py to set\nthe GPU flag to True.")
 
-#### Load the MNIST data
+
+# Load the MNIST data
 def load_data_shared(filename="../data/mnist.pkl.gz"):
     f = gzip.open(filename, 'rb')
-    training_data, validation_data, test_data = pickle.load(f, encoding="latin1")
+    training_data, validation_data, test_data = pickle.load(
+        f, encoding="latin1")
     f.close()
+
     def shared(data):
         """Place the data into shared variables.  This allows Theano to copy
         the data to the GPU, if one is available.
@@ -77,8 +82,10 @@ def load_data_shared(filename="../data/mnist.pkl.gz"):
         return shared_x, T.cast(shared_y, "int32")
     return [shared(training_data), shared(validation_data), shared(test_data)]
 
-#### Main class used to construct and train networks
-class Network(object):
+
+# Main class used to construct and train networks
+
+class Network():
 
     def __init__(self, layers, mini_batch_size):
         """Takes a list of `layers`, describing the network architecture, and
@@ -88,15 +95,16 @@ class Network(object):
         """
         self.layers = layers
         self.mini_batch_size = mini_batch_size
-        self.params = [param for layer in self.layers for param in layer.params]
+        self.params = [
+            param for layer in self.layers for param in layer.params]
         self.x = T.matrix("x")
         self.y = T.ivector("y")
         init_layer = self.layers[0]
         init_layer.set_inpt(self.x, self.x, self.mini_batch_size)
-        for j in range(1, len(self.layers)): # xrange() was renamed to range() in Python 3.
-            prev_layer, layer  = self.layers[j-1], self.layers[j]
-            layer.set_inpt(
-                prev_layer.output, prev_layer.output_dropout, self.mini_batch_size)
+        for j in range(1, len(self.layers)):
+            prev_layer, layer = self.layers[j - 1], self.layers[j]
+            layer.set_inpt(prev_layer.output, prev_layer.output_dropout,
+                           self.mini_batch_size)
         self.output = self.layers[-1].output
         self.output_dropout = self.layers[-1].output_dropout
 
@@ -108,60 +116,68 @@ class Network(object):
         test_x, test_y = test_data
 
         # compute number of minibatches for training, validation and testing
-        num_training_batches = int(size(training_data)/mini_batch_size)
-        num_validation_batches = int(size(validation_data)/mini_batch_size)
-        num_test_batches = int(size(test_data)/mini_batch_size)
+        num_training_batches = int(size(training_data) / mini_batch_size)
+        num_validation_batches = int(size(validation_data) / mini_batch_size)
+        num_test_batches = int(size(test_data) / mini_batch_size)
 
-        # define the (regularized) cost function, symbolic gradients, and updates
+        # define the (regularized) cost function, symbolic gradients, and
+        # updates
         l2_norm_squared = sum([(layer.w**2).sum() for layer in self.layers])
-        cost = self.layers[-1].cost(self)+\
-               0.5*lmbda*l2_norm_squared/num_training_batches
+        cost = self.layers[-1].cost(self) +\
+            0.5 * lmbda * l2_norm_squared / num_training_batches
         grads = T.grad(cost, self.params)
-        updates = [(param, param-eta*grad)
+        updates = [(param, param - eta * grad)
                    for param, grad in zip(self.params, grads)]
 
         # define functions to train a mini-batch, and to compute the
         # accuracy in validation and test mini-batches.
-        i = T.lscalar() # mini-batch index
+        i = T.lscalar()  # mini-batch index
         train_mb = theano.function(
             [i], cost, updates=updates,
             givens={
                 self.x:
-                training_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size],
+                training_x[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size],
                 self.y:
-                training_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                training_y[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size]
             })
         validate_mb_accuracy = theano.function(
             [i], self.layers[-1].accuracy(self.y),
             givens={
                 self.x:
-                validation_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size],
+                validation_x[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size],
                 self.y:
-                validation_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                validation_y[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size]
             })
         test_mb_accuracy = theano.function(
             [i], self.layers[-1].accuracy(self.y),
             givens={
                 self.x:
-                test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size],
+                test_x[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size],
                 self.y:
-                test_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                test_y[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size]
             })
         self.test_mb_predictions = theano.function(
             [i], self.layers[-1].y_out,
             givens={
                 self.x:
-                test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                test_x[
+                    i * self.mini_batch_size: (i + 1) * self.mini_batch_size]
             })
         # Do the actual training
         best_validation_accuracy = 0.0
         for epoch in range(epochs):
             for minibatch_index in range(num_training_batches):
-                iteration = num_training_batches*epoch+minibatch_index
+                iteration = num_training_batches * epoch + minibatch_index
                 if iteration % 1000 == 0:
                     print("Training mini-batch number {0}".format(iteration))
                 cost_ij = train_mb(minibatch_index)
-                if (iteration+1) % num_training_batches == 0:
+                if (iteration + 1) % num_training_batches == 0:
                     validation_accuracy = np.mean(
                         [validate_mb_accuracy(j) for j in range(num_validation_batches)])
                     print("Epoch {0}: validation accuracy {1:.2%}".format(
@@ -180,9 +196,10 @@ class Network(object):
             best_validation_accuracy, best_iteration))
         print("Corresponding test accuracy of {0:.2%}".format(test_accuracy))
 
-#### Define layer types
 
-class ConvPoolLayer(object):
+# Define layer types
+
+class ConvPoolLayer():
     """Used to create a combination of a convolutional and a max-pooling
     layer.  A more sophisticated implementation would separate the
     two, but for our purposes we'll always use them together, and it
@@ -202,17 +219,18 @@ class ConvPoolLayer(object):
 
         `poolsize` is a tuple of length 2, whose entries are the y and
         x pooling sizes.
-
         """
         self.filter_shape = filter_shape
         self.input_shape = input_shape
         self.poolsize = poolsize
-        self.activation_fn=activation_fn
+        self.activation_fn = activation_fn
         # initialize weights and biases
-        n_out = (filter_shape[0]*np.prod(filter_shape[2:])/np.prod(poolsize))
+        n_out = (filter_shape[0] *
+                 np.prod(filter_shape[2:]) / np.prod(poolsize))
         self.w = theano.shared(
             np.asarray(
-                np.random.normal(loc=0, scale=np.sqrt(1.0/n_out), size=filter_shape),
+                np.random.normal(loc=0, scale=np.sqrt(
+                    1.0 / n_out), size=filter_shape),
                 dtype=theano.config.floatX),
             borrow=True)
         self.b = theano.shared(
@@ -231,9 +249,10 @@ class ConvPoolLayer(object):
             input=conv_out, ws=self.poolsize, ignore_border=True)
         self.output = self.activation_fn(
             pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
-        self.output_dropout = self.output # no dropout in the convolutional layers
+        self.output_dropout = self.output  # no dropout in the convolutional layers
 
-class FullyConnectedLayer(object):
+
+class FullyConnectedLayer():
 
     def __init__(self, n_in, n_out, activation_fn=sigmoid, p_dropout=0.0):
         self.n_in = n_in
@@ -244,7 +263,7 @@ class FullyConnectedLayer(object):
         self.w = theano.shared(
             np.asarray(
                 np.random.normal(
-                    loc=0.0, scale=np.sqrt(1.0/n_out), size=(n_in, n_out)),
+                    loc=0.0, scale=np.sqrt(1.0 / n_out), size=(n_in, n_out)),
                 dtype=theano.config.floatX),
             name='w', borrow=True)
         self.b = theano.shared(
@@ -256,7 +275,7 @@ class FullyConnectedLayer(object):
     def set_inpt(self, inpt, inpt_dropout, mini_batch_size):
         self.inpt = inpt.reshape((mini_batch_size, self.n_in))
         self.output = self.activation_fn(
-            (1-self.p_dropout)*T.dot(self.inpt, self.w) + self.b)
+            (1 - self.p_dropout) * T.dot(self.inpt, self.w) + self.b)
         self.y_out = T.argmax(self.output, axis=1)
         self.inpt_dropout = dropout_layer(
             inpt_dropout.reshape((mini_batch_size, self.n_in)), self.p_dropout)
@@ -267,7 +286,8 @@ class FullyConnectedLayer(object):
         "Return the accuracy for the mini-batch."
         return T.mean(T.eq(y, self.y_out))
 
-class SoftmaxLayer(object):
+
+class SoftmaxLayer():
 
     def __init__(self, n_in, n_out, p_dropout=0.0):
         self.n_in = n_in
@@ -284,11 +304,13 @@ class SoftmaxLayer(object):
 
     def set_inpt(self, inpt, inpt_dropout, mini_batch_size):
         self.inpt = inpt.reshape((mini_batch_size, self.n_in))
-        self.output = softmax((1-self.p_dropout)*T.dot(self.inpt, self.w) + self.b)
+        self.output = softmax((1 - self.p_dropout) *
+                              T.dot(self.inpt, self.w) + self.b)
         self.y_out = T.argmax(self.output, axis=1)
         self.inpt_dropout = dropout_layer(
             inpt_dropout.reshape((mini_batch_size, self.n_in)), self.p_dropout)
-        self.output_dropout = softmax(T.dot(self.inpt_dropout, self.w) + self.b)
+        self.output_dropout = softmax(
+            T.dot(self.inpt_dropout, self.w) + self.b)
 
     def cost(self, net):
         "Return the log-likelihood cost."
@@ -299,13 +321,14 @@ class SoftmaxLayer(object):
         return T.mean(T.eq(y, self.y_out))
 
 
-#### Miscellanea
+# Miscellanea
 def size(data):
     "Return the size of the dataset `data`."
     return data[0].get_value(borrow=True).shape[0]
 
+
 def dropout_layer(layer, p_dropout):
     srng = shared_randomstreams.RandomStreams(
         np.random.RandomState(0).randint(999999))
-    mask = srng.binomial(n=1, p=1-p_dropout, size=layer.shape)
-    return layer*T.cast(mask, theano.config.floatX)
+    mask = srng.binomial(n=1, p=1 - p_dropout, size=layer.shape)
+    return layer * T.cast(mask, theano.config.floatX)
