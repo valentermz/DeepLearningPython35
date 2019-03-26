@@ -204,7 +204,6 @@ class ConvPoolLayer():
     layer.  A more sophisticated implementation would separate the
     two, but for our purposes we'll always use them together, and it
     simplifies the code, so it makes sense to combine them.
-
     """
 
     def __init__(self, filter_shape, input_shape, poolsize=(2, 2),
@@ -224,6 +223,7 @@ class ConvPoolLayer():
         self.input_shape = input_shape
         self.poolsize = poolsize
         self.activation_fn = activation_fn
+
         # initialize weights and biases
         n_out = (filter_shape[0] *
                  np.prod(filter_shape[2:]) / np.prod(poolsize))
@@ -259,6 +259,7 @@ class FullyConnectedLayer():
         self.n_out = n_out
         self.activation_fn = activation_fn
         self.p_dropout = p_dropout
+
         # Initialize weights and biases
         self.w = theano.shared(
             np.asarray(
@@ -293,6 +294,7 @@ class SoftmaxLayer():
         self.n_in = n_in
         self.n_out = n_out
         self.p_dropout = p_dropout
+
         # Initialize weights and biases
         self.w = theano.shared(
             np.zeros((n_in, n_out), dtype=theano.config.floatX),
