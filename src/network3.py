@@ -263,7 +263,7 @@ class FullyConnectedLayer():
         self.w = theano.shared(
             np.asarray(
                 np.random.normal(
-                    loc=0.0, scale=np.sqrt(1.0 / n_out), size=(n_in, n_out)),
+                    loc=0.0, scale=np.sqrt(1.0 / n_in), size=(n_in, n_out)),
                 dtype=theano.config.floatX),
             name='w', borrow=True)
         self.b = theano.shared(
