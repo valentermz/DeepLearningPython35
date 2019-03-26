@@ -116,9 +116,9 @@ class Network():
         test_x, test_y = test_data
 
         # compute number of minibatches for training, validation and testing
-        num_training_batches = int(size(training_data) / mini_batch_size)
-        num_validation_batches = int(size(validation_data) / mini_batch_size)
-        num_test_batches = int(size(test_data) / mini_batch_size)
+        num_training_batches = int(size(training_data) // mini_batch_size)
+        num_validation_batches = int(size(validation_data) // mini_batch_size)
+        num_test_batches = int(size(test_data) // mini_batch_size)
 
         # define the (regularized) cost function, symbolic gradients, and
         # updates
