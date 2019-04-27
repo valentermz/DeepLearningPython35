@@ -33,6 +33,7 @@ import pickle
 import gzip
 
 # Third-party libraries
+import random
 import numpy as np
 import theano
 import theano.tensor as T
@@ -64,11 +65,34 @@ else:
 
 
 # Load the MNIST data
-def load_data_shared(filename="../data/mnist.pkl.gz"):
+def load_data_shared(filename="../data/mnist.pkl.gz", percentage=100):
     f = gzip.open(filename, 'rb')
     training_data, validation_data, test_data = pickle.load(
         f, encoding="latin1")
     f.close()
+
+    # Sample a percentage of the total data
+    m_train = training_data[0].shape[0]
+    ind_train = list(range(m_train))
+    random.shuffle(ind_train)
+    ind_train = ind_train[0:(percentage*m_train) // 100]
+
+    m_val = validation_data[0].shape[0]
+    ind_val = list(range(m_val))
+    random.shuffle(ind_val)
+    ind_val = ind_val[0:(percentage*m_val) // 100]
+
+    m_test = test_data[0].shape[0]
+    ind_test = list(range(m_test))
+    random.shuffle(ind_test)
+    ind_test = ind_test[0:(percentage*m_test) // 100]
+
+    training_data = (training_data[0][ind_train, :],
+                     training_data[1][ind_train])
+    validation_data = (validation_data[0][ind_val, :],
+                       validation_data[1][ind_val])
+    test_data = (test_data[0][ind_test, :],
+                 test_data[1][ind_test])
 
     def shared(data):
         """Place the data into shared variables.  This allows Theano to copy
@@ -209,8 +233,8 @@ class ConvPoolLayer():
     def __init__(self, filter_shape, input_shape, poolsize=(2, 2),
                  activation_fn=sigmoid):
         """`filter_shape` is a tuple of length 4, whose entries are the number
-        of filters, the number of input feature maps, the filter height, and the
-        filter width.
+        of filters, the number of input feature maps, the filter height, and
+        the filter width.
 
         `input_shape` is a tuple of length 4, whose entries are the
         mini-batch size, the number of input feature maps, the image
@@ -249,7 +273,7 @@ class ConvPoolLayer():
             input=conv_out, ws=self.poolsize, ignore_border=True)
         self.output = self.activation_fn(
             pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
-        self.output_dropout = self.output  # no dropout in the convolutional layers
+        self.output_dropout = self.output  # no dropout in convolutional layers
 
 
 class FullyConnectedLayer():
@@ -334,3 +358,6 @@ def dropout_layer(layer, p_dropout):
         np.random.RandomState(0).randint(999999))
     mask = srng.binomial(n=1, p=1 - p_dropout, size=layer.shape)
     return layer * T.cast(mask, theano.config.floatX)
+
+
+# No random shuffle of data before each epoch?
